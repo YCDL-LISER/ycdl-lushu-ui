@@ -2,15 +2,15 @@ import request from '@/utils/request'
 
 export function page(query) {
   return request({
-    url: '/easy/lushu/regional',
+    url: '/system/lushu/routes/search',
     method: 'get',
     params: query
   })
 }
 
-export function loadRoute() {
+export function loadRoute(id) {
   return request({
-    url: '/system/lushu/routes/details/3',
+    url: '/system/lushu/routes/details/' + id,
     method: 'get'
   })
 }

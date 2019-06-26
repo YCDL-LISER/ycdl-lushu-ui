@@ -11,13 +11,12 @@
         <div class="grid-content bg-purple">
           <h1 style="text-align:center">路书</h1>
           <el-input
-            v-model="input3"
-            placeholder="请输入内容"
+            v-model="query.keyword"
+            placeholder="请输入路线名称"
             class="input-with-select"
             size="medium"
             clearable
           >
-            >
             <el-button slot="append" icon="el-icon-search" @click="handleSearch">搜索</el-button>
           </el-input>
         </div>
@@ -27,24 +26,23 @@
       </el-col>
     </el-row>
     <el-row style="height: 10px"/>
-    <div v-infinite-scroll="loadRoute">
-      <el-row :gutter="12">
-        <el-col v-for="site in sites" :key="site.id" :span="8">
-          <el-card shadow="hover" style="margin-bottom: 12px">
-            <a :href="'#/route/details/'+site.id+''">
-              <div class="bottom clearfix">
-                <div>
-                  <!--:style="{height:width}"-->
-                  <el-image :src="site.pic" :style="{height:height}"/>
-                </div>
-                <h2 style="font-size: 15px">{{ site.title }}</h2>
-                <span style="font-size: 10px">{{ site.description }}</span>
+    <!-- <div> -->
+    <el-row v-infinite-scroll="pageQuery" :gutter="12" infinite-scroll-disabled="disabled">
+      <el-col v-for="site in contents" :key="site.routId" :span="8">
+        <el-card shadow="hover" style="margin-bottom: 12px" :body-style="{ padding: '0px'}">
+          <a :href="'#/route/details/'+site.routId+''">
+            <div class="bottom clearfix">
+              <div>
+                <el-image :src="site.snapshot" :style="{height:height}"/>
               </div>
-            </a>
-          </el-card>
-        </el-col>
-      </el-row>
-    </div>
+              <h2 style="font-size: 15px">{{ site.name }}</h2>
+              <span style="font-size: 10px">{{ site.routId }}</span>
+            </div>
+          </a>
+        </el-card>
+      </el-col>
+    </el-row>
+    <!-- </div> -->
   </div>
 </template>
 
@@ -55,50 +53,54 @@ export default {
   data() {
     return {
       height: undefined,
-      count: 0,
-      input3: '',
-      select: '',
-      fits: ['fill', 'contain', 'cover', 'none', 'scale-down'],
-      url:
-        'https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg',
-      currentDate: new Date(),
-      levelList: null,
-      currentPage: -1,
-      sites: []
+      query: {
+        page: -1,
+        keyword: undefined
+      },
+      last: false,
+      empty: false,
+      contents: []
     }
   },
   mounted() {
-    const that = this
-    window.onresize = () => {
-      that.height = document.body.clientWidth / 5.5 + 'px'
-    }
+    this.highlyAdaptive()
   },
   created() {
-    this.height = document.body.clientWidth / 5.5 + 'px'
-    this.loadRoute()
+    this.highlyAdaptive()
   },
   methods: {
-    load() {
-      this.count += 2
+    highlyAdaptive() {
+      window.onresize = () => {
+        this.height = document.body.clientWidth / 7 + 'px'
+        console.log(this.height)
+      }
     },
-    loadRoute() {
-      console.log('当前页：', this.currentPage)
-      this.currentPage += 1
-      page({ page: this.currentPage })
-        .then(response => {
-          this.sites.push(...response.data.data)
-          console.log('最终数据个数', this.sites.length)
-        })
-        .catch(() => {
-          console.log('请求失败')
-        })
-    },
-    clickHandler() {
-      console.log('点击')
-    },
-    fetchData() {},
     handleSearch() {
-      alert('点击')
+      this.query.page = -1
+      this.last = false
+      this.contents = []
+      this.pageQuery()
+    },
+    pageQuery() {
+      if (this.last) {
+        this.$notify({
+          message: '已加载全部',
+          type: 'warning',
+          duration: 2000
+        })
+        return
+      }
+
+      this.query.page += 1
+      page(this.query).then(response => {
+        const { content, number, last, empty } = response.data.data
+        this.query.page = number
+        this.last = last
+        this.empty = empty
+        if (!empty) {
+          this.contents.push(...content)
+        }
+      })
     }
   }
 }
