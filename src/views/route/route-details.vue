@@ -47,16 +47,28 @@
           height="280px"
           @change="carouselChange"
         >
-          <el-carousel-item
-            v-for="item in resolveKeywords"
-            :key="item.pointId"
-            v-viewer="{movable: true}"
-          >
+          <el-carousel-item v-for="item in resolveKeywords" :key="item.pointId">
             <el-card shadow="hover" :body-style="{ padding: '0px'}">
-              <div v-if="item.type ===2">
+              <el-card
+                v-if="item.type ===2"
+                v-viewer="{movable: true}"
+                :body-style="{ padding: '0px' }"
+              >
+                <div style="height:240px;width:100%;overflow:hidden">
+                  <img :src="item.name" class="image" style="width:100%">
+                </div>
+                <div style="padding: 8px 14px;">
+                  <div class="bottom clearfix">
+                    <span>花很多时间都会觉得</span>
+                    <time class="time">2019-06-27 10:19:11</time>
+                  </div>
+                </div>
+              </el-card>
+
+              <div v-else-if="item.type ===3" @click="openVideoLog(playerSources.mp4,item.name)">
                 <el-card :body-style="{ padding: '0px' }">
                   <div style="height:240px;width:100%;overflow:hidden">
-                    <img :src="item.name" class="image" style="width:100%">
+                    <img src="@/assets/images/music.png" class="image" style="width:100%">
                   </div>
                   <div style="padding: 8px 14px;">
                     <div class="bottom clearfix">
@@ -67,7 +79,28 @@
                 </el-card>
               </div>
 
-              <el-button
+              <div v-else-if="item.type ===4" @click="openVideoLog(playerSources.mp4,item.name)">
+                <el-card :body-style="{ padding: '0px' }">
+                  <div style="height:240px;width:100%;overflow:hidden">
+                    <img src="@/assets/images/video.png" class="image" style="width:100%">
+                  </div>
+                  <div style="padding: 8px 14px;">
+                    <div class="bottom clearfix">
+                      <span>花很多时间都会觉得</span>
+                      <time class="time">2019-06-27 10:19:11</time>
+                    </div>
+                  </div>
+                </el-card>
+              </div>
+
+              <el-card v-else>
+                <div style="height:280px">
+                  <h2>{{ item.name }}</h2>
+                  <p>{{ item.explain }}</p>
+                  <time class="time">{{ item.time }}</time>
+                </div>
+              </el-card>
+              <!-- <el-button
                 v-if="item.type ===3"
                 type="primary"
                 @click="openVideoLog(playerSources.mp3,'http://gzcj-image.oss-cn-shenzhen.aliyuncs.com/public/20190627031459.mp3')"
@@ -76,7 +109,7 @@
                 v-if="item.type ===4"
                 type="primary"
                 @click="openVideoLog(playerSources.mp4,item.name)"
-              >视频</el-button>
+              >视频</el-button>-->
             </el-card>
           </el-carousel-item>
         </el-carousel>
@@ -217,15 +250,14 @@ export default {
       this.showPoint(index)
     },
     loadKeyPoints(points) {
-      console.log(points)
       this.all_index = points.length
       points.forEach((val, index) => {
+        // eslint-disable-next-line no-undef
         var point = new BMap.Point(val.lat, val.lng)
-        console.log(this.route_photo)
-        console.log(this.route_photo[val.type])
         // eslint-disable-next-line no-undef
         var myIcon = new BMap.Icon(
           this.route_photo[val.type],
+          // eslint-disable-next-line no-undef
           new BMap.Size(48, 48),
           {
             // eslint-disable-next-line no-undef
@@ -342,7 +374,7 @@ export default {
   padding: 10px 0;
   background-color: #f9fafc;
 }
-.video-js{
+.video-js {
   width: 100%;
 }
 </style>

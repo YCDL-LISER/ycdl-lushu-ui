@@ -1,152 +1,169 @@
 <template>
-  <div
-    class="app-container"
-    style="background: url('https://cn.bing.com/th?id=OHR.PhilippinesFirefly_ZH-CN4519927697_1920x1080.jpg&rf=LaDigue_1920x1080.jpg&pid=hp')"
-  >
-    <el-row :gutter="20">
-      <el-col :span="8">
-        <div class="grid-content bg-purple" />
-      </el-col>
-      <el-col :span="8">
-        <div class="grid-content bg-purple">
-          <h1 style="text-align:center">路书</h1>
-          <el-input v-model="input3" placeholder="请输入内容" class="input-with-select" size="medium" clearable>>
-            <el-button slot="append" icon="el-icon-search" @click="handleSearch">搜索</el-button>
-          </el-input>
-        </div>
-      </el-col>
-      <el-col :span="8">
-        <div class="grid-content bg-purple" />
-      </el-col>
-    </el-row>
-    <el-row style="height: 10px" />
-    <div v-infinite-scroll="loadRoute">
-      <el-row :gutter="12">
-        <el-col v-for="site in sites" :key="site.id" :span="8">
-          <el-card shadow="hover" style="margin-bottom: 12px">
-            <a :href="'#/route/'+site.id+''">
-              <div class="bottom clearfix">
-                <div>
-                  <!--:style="{height:width}"-->
-                  <el-image :src="site.pic" :style="{height:height}" />
-                </div>
-                <h2 style="font-size: 15px">{{ site.title }}</h2>
-                <span style="font-size: 10px">{{ site.description }}</span>
-              </div>
-            </a>
-          </el-card>
-        </el-col>
-      </el-row>
-    </div>
-  </div>
+  <div :id="mapId" class="bm-view"/>
 </template>
 
 <script>
-import { page } from '@/api/route'
+import { search } from '@/api/point/index.js'
+import { wgs84_to_bd09 } from '@/assets/js/gps_utils.js'
+import { loadBMap } from '@/assets/js/async-load-bmap.js'
 
 export default {
+  name: 'Point',
   data() {
     return {
-      height: undefined,
-      count: 0,
-      input3: '',
-      select: '',
-      fits: ['fill', 'contain', 'cover', 'none', 'scale-down'],
-      url: 'https://fuss10.elemecdn.com/e/5d/4a731a90594a4af544c0c25941171jpeg.jpeg',
-      currentDate: new Date(),
-      levelList: null,
-      currentPage: -1,
-      sites: []
+      mapId: 'BMap-' + parseInt(Date.now() + Math.random()),
+      map: null,
+      zoom: 11,
+      points: [],
+      markers: [],
+      icon: require('@/assets/images/ic_route_photo.png'),
+      currentLocation: null,
+      query: {
+        keyword: undefined,
+        sLng: undefined,
+        sLat: undefined,
+        eLng: undefined,
+        eLat: undefined,
+        range: 10
+      }
     }
   },
   mounted() {
-    const that = this
-    window.onresize = () => {
-      that.height = (document.body.clientWidth / 5.5) + 'px'
-    }
+    this.initMap()
+
+    // 加载百度地图
+    // MapLoader().then(BMap => {
+    //   console.log('加载地图成功')
+    //   this.map = new BMap.Map('container')
+    //   const point = new BMap.Point(116.404, 39.915)
+    //   this.map.centerAndZoom(point, 15)
+    //   this.map.enableScrollWheelZoom() // 启用滚轮放大缩小，默认禁用
+    //   this.map.enableContinuousZoom() // 启用地图惯性拖拽，默认禁用
+    //   this.map.addControl(new BMap.NavigationControl())
+    //   this.map.addControl(new BMap.MapTypeControl())
+    // })
   },
   created() {
-    this.height = (document.body.clientWidth / 5.5) + 'px'
-    this.loadRoute()
+
   },
   methods: {
-    load() {
-      this.count += 2
+    initMap() {
+      loadBMap('tSiFWPYXfG7iInGZhEfL8ThMMAisdyXQ')
+        .then(() => {
+          // 百度地图API功能
+          this.map = new BMap.Map(this.mapId) // 创建Map实例
+
+          // 添加地图类型控件
+          this.map.addControl(
+            new BMap.MapTypeControl({
+              mapTypes: [BMAP_NORMAL_MAP, BMAP_HYBRID_MAP]
+            })
+          )
+          // this.map.setCurrentCity('北京') // 设置地图显示的城市 此项是必须设置的
+          this.map.enableScrollWheelZoom(true) // 开启鼠标滚轮缩放
+
+          const that = this
+          // 浏览器定位获取当前经纬度坐标
+          const geolocation = new BMap.Geolocation()
+          // geolocation.getCurrentPosition(function(r) {
+          //   if (this.getStatus() == BMAP_STATUS_SUCCESS) {
+          //     that.currentLocation = r.point
+          //     that.map.centerAndZoom(r.point, that.zoom)
+          //     that.query.sLng = r.point.lng
+          //     that.query.sLat = r.point.lat
+          //     console.log('浏览器定位成功：', r.point)
+          //   } else {
+          //     console.log('浏览器定位失败：', r)
+          //   }
+          // })
+
+          // 开启SDK辅助定位
+          // geolocation.enableSDKLocation()
+          geolocation.getCurrentPosition(function(r) {
+            if (this.getStatus() == BMAP_STATUS_SUCCESS) {
+              console.log('SDK定位成功：', this)
+              that.currentLocation = r.point
+              that.map.centerAndZoom(r.point, that.zoom)
+              that.query.sLng = r.point.lng
+              that.query.sLat = r.point.lat
+            } else {
+              console.log('SDK定位失败：', this.getStatus())
+            }
+          })
+
+          // 加载数据
+          this.loadPoints()
+        })
+        .catch(err => {
+          console.log('地图加载失败：', err)
+        })
     },
-    loadRoute() {
-      console.log('当前页：', this.currentPage)
-      this.currentPage += 1
-      page({ page: this.currentPage }).then(response => {
-        this.sites.push(...response.data.data)
-        console.log('最终数据个数', this.sites.length)
-      }).catch(() => {
-        console.log('请求失败')
+    loadPoints() {
+      search(this.query).then(response => {
+        const { data } = response.data
+        const that = this
+        data.forEach(value => {
+          const location = wgs84_to_bd09(value.lng, value.lat)
+          const point = new BMap.Point(location[0], location[1])
+          if (that) {
+            const marker = this.addMarkerToMap(point)
+            that.points.push(point)
+            that.markers.push(marker)
+          }
+        })
+        this.map.setViewport(this.points)
+        new BMapLib.MarkerClusterer(this.map, { markers: this.markers })
+      }).catch(error => {
+        console.log('数据加载失败：', error)
       })
     },
-    clickHandler() {
-      console.log('点击')
+    addMarkerToMap(point) {
+      const startIcon = new BMap.Icon(this.icon, new BMap.Size(80, 40), {
+        // 指定定位位置。
+        // 当标注显示在地图上时，其所指向的地理位置距离图标左上
+        // 角各偏移10像素和25像素。您可以看到在本例中该位置即是
+        // 图标中央下端的尖角位置。
+        anchor: new BMap.Size(40, 40),
+        // 设置图片偏移。
+        // 当您需要从一幅较大的图片中截取某部分作为标注图标时，您
+        // 需要指定大图的偏移位置，此做法与css sprites技术类似。
+        imageOffset: new BMap.Size(20, 0)
+      })
+      // 创建标注对象并添加到地图
+      const marker = new BMap.Marker(point, { icon: startIcon })
+      this.map.addOverlay(marker)
+      const infoWindow = this.getInfoWindow()
+      marker.addEventListener('click', function() {
+        this.openInfoWindow(infoWindow)
+      })
+      return marker
     },
-    fetchData() {
-    },
-    handleSearch() {
-      alert('点击')
+    getInfoWindow() {
+      const sContent =
+          '<div style=\'height: 100px;width: 300px;\'>' +
+          '<div style=\'width: 20%;height: 100%;float: left;\'>' +
+          '<img src=\'http://ycdl.oss-cn-shenzhen.aliyuncs.com/lushu/users/avatars/8343bda9342c4a2aab6670beb4cebbb9.jpeg\' ' +
+          'style=\'height: 40px;width: 40px;border-radius: 20px\'' +
+          'onclick=\'infoWindowClick(this)\'>' +
+          '<img src=\'http://ycdl.oss-cn-shenzhen.aliyuncs.com/lushu/users/avatars/8343bda9342c4a2aab6670beb4cebbb9.jpeg\' ' +
+          'style=\'height: 40px;width: 40px;border-radius: 20px;margin-top: 10px\'>' +
+          '</div>' +
+          '<div style=\'width: 80%;height: 100%;float: left;\'>' +
+          '<div>这里是点记录的名称</div>' +
+          '<div>距离：2.18公里</div>' +
+          '<div>地点：思雅路</div>' +
+          '<div>上传时间：2019-06-27 07:08:09</div>' +
+          '</div>' +
+          '</div>'
+      return new BMap.InfoWindow(sContent)
     }
   }
 }
 </script>
 
 <style>
-  .scale img{
+  .bm-view {
     width: 100%;
-    height: auto;
+    height: 500px;
   }
-
-  .time {
-    font-size: 13px;
-    color: #999;
-  }
-
-  .bottom {
-    margin-top: 13px;
-    line-height: 12px;
-  }
-
-  .button {
-    padding: 0;
-    float: right;
-  }
-
-  .image {
-    width: 100%;
-    display: block;
-  }
-
-  .grid-content {
-    border-radius: 4px;
-    min-height: 36px;
-  }
-
-  .row-bg {
-    padding: 10px 0;
-    background-color: #f9fafc;
-  }
-
-  .clearfix:before,
-  .clearfix:after {
-    display: table;
-    content: '';
-  }
-
-  .clearfix:after {
-    clear: both;
-  }
-
-  .el-card__body {
-    padding: 5px;
-  }
-
-  .bottom {
-    margin-top: 0;
-  }
-
 </style>
