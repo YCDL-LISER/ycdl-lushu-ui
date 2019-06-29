@@ -82,7 +82,8 @@
         map.addOverlay(marker);
         var infoWindow = getInfoWindow();
         marker.addEventListener("click", function () {
-            this.openInfoWindow(infoWindow);
+            console.log("Marker点击")
+            // this.openInfoWindow(infoWindow);
         });
         return marker;
     }
@@ -93,7 +94,7 @@
             "<div style='width: 20%;height: 100%;float: left;'>" +
             "<img src='http://ycdl.oss-cn-shenzhen.aliyuncs.com/lushu/users/avatars/8343bda9342c4a2aab6670beb4cebbb9.jpeg' " +
             "style='height: 40px;width: 40px;border-radius: 20px'" +
-            "@onclick='infoWindowClick(this)'>" +
+            "onclick='infoWindowClick(this)'>" +
             "<img src='http://ycdl.oss-cn-shenzhen.aliyuncs.com/lushu/users/avatars/8343bda9342c4a2aab6670beb4cebbb9.jpeg' " +
             "style='height: 40px;width: 40px;border-radius: 20px;margin-top: 10px'>" +
             "</div>" +
